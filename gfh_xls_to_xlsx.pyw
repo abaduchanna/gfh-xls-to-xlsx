@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""
+GFH Legacy Excel Converter  (one-time batch tool)
+=================================================
+Pick a folder → converts every legacy .xls (and .xlsm/.xlt/.xlsb) file inside it
+to modern .xlsx, using real Excel so formatting, formulas and data are preserved.
+
+  • Browse to a folder (optionally include subfolders)
+  • Each  Name.xls  →  Name.xlsx  in the same place
+  • Originals are KEPT by default (tick a box to delete them after success)
+  • Already-converted files are skipped unless you tick "overwrite"
+
+Requires Microsoft Excel installed (uses Excel COM for faithful conversion).
+"""
+
+# ── Auto-installer (version-aware) ─────────────────────────────────────────────
+import sys, subprocess
+def _pkg_version(dist):
+    try:
+        import importlib.metadata as _md
+        return _md.version(dist)
+    except Exception:
+        return None
+def _ensure(pip_name, imp_name):
+    if _pkg_version(pip_name) is not None: return
+    try: __import__(imp_name.split(".")[0])
+    except ImportError:
+        try:
+            print(f"Installing {pip_name}…")
+            subprocess.check_call([sys.executable,"-m","pip","install","--upgrade",pip_name,"-q"])
+        except Exception as e:
+            print(f"  [WARN] could not install {pip_name}: {e}")
+for _p,_i in [("pywin32","win32com")]:
+    _ensure(_p,_i)
+
+import os, time, threading, queue, traceback
+from datetime import datetime
+import tkinter as tk
+from tkinter import ttk, scrolledtext, messagebox, filedialog
+import win32com.client
+
+# Excel file-format codes
+XLSX = 51        # xlOpenXMLWorkbook
+LEGACY_EXTS = (".xls", ".xlsm", ".xlt", ".xlsb", ".xlc")   # convert these → .xlsx
+RESTART_EVERY = 60   # restart Excel periodically to avoid memory bloat on big batches
+
+_CANCEL = threading.Event()
+
+
+def _find_files(folder, recurse):
+    out=[]
+    if recurse:
+        for root,_,files in os.walk(folder):
+            for f in files: out.append(os.path.join(root,f))
+    else:
+        out=[os.path.join(folder,f) for f in os.listdir(folder)]
+    res=[]
+    for p in out:
+        base=os.path.basename(p)
+        if base.startswith("~$"): continue                    # Excel lock files
+        if os.path.splitext(base)[1].lower() in LEGACY_EXTS:
+            res.append(p)
+    return sorted(res)
+
+
+class Converter:
+    def __init__(self, log):
+        self.log=log; self.xl=None; self._opened=0
+
+    def _start_excel(self):
+        self.xl=win32com.client.DispatchEx("Excel.Application")
+        self.xl.Visible=False
+        self.xl.DisplayAlerts=False
+        try: self.xl.AutomationSecurity=3   # block macros from prompting
+        except Exception: pass
+        try: self.xl.AskToUpdateLinks=False
+        except Exception: pass
+
+    def _stop_excel(self):
+        if self.xl is not None:
+            try: self.xl.Quit()
+            except Exception: pass
+        self.xl=None
+
+    def _recycle_if_needed(self):
+        self._opened+=1
+        if self._opened % RESTART_EVERY == 0:
+            self._stop_excel(); time.sleep(1); self._start_excel()
+
+    def convert_one(self, path, overwrite, delete_original):
+        out=os.path.splitext(path)[0]+".xlsx"
+        if os.path.exists(out) and not overwrite:
+            return "skip"
+        wb=None
+        try:
+            try:
+                wb=self.xl.Workbooks.Open(os.path.abspath(path), UpdateLinks=0, ReadOnly=True)
+            except Exception:
+                # corrupt/odd file → try Excel's repair-open
+                wb=self.xl.Workbooks.Open(os.path.abspath(path), UpdateLinks=0,
+                                          ReadOnly=True, CorruptLoad=1)
+            wb.SaveAs(os.path.abspath(out), FileFormat=XLSX)
+            wb.Close(False); wb=None
+            self._recycle_if_needed()
+            if delete_original:
+                try: os.remove(path)
+                except Exception as e: self.log(f"      (kept original — delete failed: {e})","warning")
+            return "ok"
+        except Exception as e:
+            if wb is not None:
+                try: wb.Close(False)
+                except Exception: pass
+            # a bad file can wedge the instance — recycle it
+            try: self._stop_excel(); self._start_excel()
+            except Exception: pass
+            return f"error: {e}"
+
+    def run(self, files, overwrite, delete_original):
+        self._start_excel()
+        ok=skip=err=0
+        try:
+            for i,p in enumerate(files,1):
+                if _CANCEL.is_set():
+                    self.log("  ⏹ Cancelled by user.","warning"); break
+                name=os.path.relpath(p, os.path.commonpath(files)) if len(files)>1 else os.path.basename(p)
+                r=self.convert_one(p, overwrite, delete_original)
+                if r=="ok":
+                    ok+=1;  self.log(f"  [{i}/{len(files)}] ✅ {name}")
+                elif r=="skip":
+                    skip+=1; self.log(f"  [{i}/{len(files)}] ↷ {name} (xlsx exists)")
+                else:
+                    err+=1; self.log(f"  [{i}/{len(files)}] ❌ {name} — {r}","error")
+        finally:
+            self._stop_excel()
+        return ok, skip, err
+
+
+# ── GUI ────────────────────────────────────────────────────────────────────────
+# Brand palette kept in sync with GFH_Inventory_Aging_Processor.pyw
+NAVY  = "#090d26"
+RED   = "#e8212a"
+WHITE = "#ffffff"
+LIGHT = "#f0f4fa"
+LOG_BG   = "#10182e"
+LOG_FG   = "#a8d8ff"
+
+ICON_ICO_NAME = "GFH_Telecom_TBLogo.ico"
+LOGO_PNG_NAME = "GFH_Telecom_Logo.png"
+COPYRIGHT_TEXT = "Created by Abad Umair Channa  |  Copyright © 2026  |  All rights reserved."
+ICON_ICO_B64 = "AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAA0GRv/NBkb/zQZG/80GRv/NBkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zQZG/81GRv/NBgb/zUZG/81GRv/NBkb/zQZG/80GBv/NRkb/zQYG/80GRv/NBkb/zQZG/80GRv/NBkb/zQZG/81GRv/NRkb/zQZG/80GRv/NBgb/zUZG/80GRv/NBkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GBv/NRgb/zUYG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zYZHP81GRv/NRkb/zUYG/81GRv/NRkb/zUZG/81GRv/NRkc/zUZG/81GRz/Nhkc/zYZG/82GRz/Nhkc/zYZHP82GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUYG/8/JCf/TDM2/zYaHP81GRv/NRgb/zUZG/81GRv/NRkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkb/zYZHP81GRv/NRkb/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkb/zYZG/82GRz/NRkb/zoeIP8/JCf/Nhkb/zUZG/81GRv/Nhkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zUYG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZG/82GRv/Nhkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZG/82GRr/NRkh/zMZKv8zGS3/Mxkn/zUZHv82GRr/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Mxoy/yseZv8lIIn/IyCS/yIfkf8iHoz/JB16/ywbUP80GSX/Nhka/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhke/y8eWf8mI53/JyGL/y0dW/8wG0H/MBo7/y4aRf8pHGT/IR6O/yMdg/8wGjr/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHf8uIGj/JyWn/y8eWf80Giv/MRxH/ywfaP8rH3D/LR1e/zIaOf8zGS3/Jxxr/yEekv8wGj//Nhka/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRr/MR9S/ykorP8xHk3/Mxw4/yojjf8nJKD/KSGD/ysgd/8oIIj/JSKb/yoecP8vG0f/KB1t/yMfjv8zGi7/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zcZHP83GRz/Nxkb/zUaKP8sKKL/MCJu/zQbM/8qJqD/LCOE/zQaMv83GRv/Nxkb/zYZHf8uHVn/IyOp/yQhnP8sHWX/Jh+G/yodav82GRv/Nxkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zcZHP82GRz/Nxkc/zcZHP83GRz/Nxkc/zcZHP83GRn/NCBT/y4rsP81GzL/LyWD/y0mkv82GiP/NRsu/y8hcP8sI4T/MB5Z/zAdSv8mI6H/JiOc/ywfbP8vHEz/JiGW/zQaKv83GRv/Nxkc/zcZHP83GRz/Nxkc/zcZHP82GRz/Nxkc/zYZHP83GRz/Nxkc/zYZHP83GRz/Nxkc/zcZGv8yJX3/MSeR/zUbNf8uKrL/NB5K/zYaJv8tJpb/LCaY/y4hdv8pJqT/LiFy/y4eX/8sH3D/NBou/zQaK/8mIpn/MRxC/zcZGv83GRz/Nxkc/zcZHP83GRz/Nxkc/zcZHP82GBv/Nhgb/zYYG/82GRz/Nhkc/zYZHP82GRz/Nxkb/zIplP8zJnr/NB5I/y8ss/81Giz/Mx9P/y0qrv81GzD/NxgX/zEeUf8pKLD/LSN//y0iev8tInn/LCF9/yclq/8wHU3/NxgZ/zcZHP83GRz/Nxkc/zcZHP83GRz/Nhkc/zYYG/82GBv/Nhgc/zYZHP82GBz/Nhgb/zYYG/82GR//Miyi/zIrnf80IVv/MS62/zUbLP8zH0//Lyyy/zUbMf82GBf/Mh9U/ysqtP8uI4D/LiJ7/y0iev8tIXn/Lh9r/zQaK/82GBv/Nhgb/zYYHP82GRz/Nhkc/zYYHP82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/NhgZ/zUfSf8yM8X/MjHC/zIrmv8xMLv/NCBO/zUZJv8xKp//MCul/zElgP8uK7H/MSNz/zYYGf82GBf/NhgY/zUaK/8zHUL/Nhgc/zYYG/82GBv/Nhgc/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBn/NSBL/zM0yf8yM8X/MyiB/zMqkf8yLaP/Nhok/zUbL/8yJXr/MSiQ/zIiY/81GSH/NRst/zMfUv80HDX/Mxw+/zEiaP82GSD/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GR//NSJb/zQpiv81I1z/NRw5/zIwuf8zLJr/NRw3/zYYGv80H0n/MimS/zMmfP8wK6j/Lyy4/y8qrv80HT7/Nhke/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBb/NSFS/zMzyP81Ilf/NR09/zIuqP8yMsT/Myh//zEtpf8xLrP/MDLP/zInh/80HDn/MCyx/zMiZv82GBj/Nhgb/zYYG/82GBv/Nxgb/zYYG/82GBv/Nxgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GR7/NSh//zQ0zf81JWr/NRsu/zQhVf80I2L/MyeE/zExxf8yLar/NB1D/zInh/8wL7v/NB1A/zYYGf82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYGv82GR//NSZv/zQ0yv80MLL/NSZy/zUgT/81IVP/MyiI/zIsnf8xMLz/MS6v/zQfSv82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBr/NR07/zUogv80MLX/NDLE/zQyxf8zMb3/Myyj/zQjZ/81Gin/NhgZ/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBn/NhgZ/zUZIv82Gy//NRw0/zUaK/82GB7/NhgY/zYYGv82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/83GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYGv82GBr/Nhga/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/NRgb/zUYG/81GBv/NRgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zUYG/81GBv/NRgb/zYYG/81GBv/Nhgb/zYYG/81GBv/NRgb/zUYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/81GBv/NRgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/82GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zYZG/81GBv/NRgb/zUYG/81GBv/NRgb/zUZG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+
+
+def _script_dir():
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _set_window_icon(root):
+    """Set taskbar + titlebar icon from the embedded GFH_Telecom_TBLogo.ico."""
+    try:
+        import base64, tempfile, atexit
+        data = base64.b64decode(ICON_ICO_B64.strip())
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".ico")
+        tmp.write(data); tmp.close()
+        atexit.register(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
+        root.iconbitmap(default=False, bitmap=tmp.name)
+        root.iconbitmap(tmp.name)
+        return
+    except Exception:
+        pass
+    # Fallback: use the brand PNG as the window icon
+    png_path = os.path.join(_script_dir(), LOGO_PNG_NAME)
+    try:
+        if os.path.exists(png_path):
+            from PIL import Image as _PI, ImageTk as _PIT
+            root.iconphoto(True, _PIT.PhotoImage(_PI.open(png_path)))
+    except Exception:
+        pass
+
+
+class App:
+    def __init__(self, root):
+        self.root=root; self._q=queue.Queue(); self._busy=False
+        root.title("GFH Legacy Excel Converter")
+        root.update_idletasks()
+        _sw,_sh=root.winfo_screenwidth(),root.winfo_screenheight()
+        _w,_h=min(800,_sw-80),min(680,_sh-120)
+        root.geometry(f"{_w}x{_h}+{(_sw-_w)//2}+{(_sh-_h)//2}")
+        root.minsize(660,540)
+        root.configure(bg=LIGHT); root.eval("tk::PlaceWindow . center")
+        _set_window_icon(root)
+
+        self._logo_img=None
+        self._styles(); self._header(); self._body(); self._copyright_bar(); self._poll()
+
+    def _styles(self):
+        s=ttk.Style(); s.theme_use("clam")
+        s.configure("Run.TButton",background=RED,foreground=WHITE,
+                    font=("Calibri",11,"bold"),padding=(16,9),borderwidth=0)
+        s.map("Run.TButton",background=[("active","#c01820"),("disabled","#aaa")])
+        s.configure("Browse.TButton",background=NAVY,foreground=WHITE,
+                    font=("Calibri",10),padding=(10,6),borderwidth=0)
+        s.map("Browse.TButton",background=[("active","#1a2550")])
+        s.configure("Cancel.TButton",background="#1a2550",foreground=WHITE,
+                    font=("Calibri",10),padding=(10,6),borderwidth=0)
+        s.map("Cancel.TButton",background=[("active","#2a3560")])
+        s.configure("Accent.Horizontal.TProgressbar",
+                    troughcolor="#dde6f0",background=RED,borderwidth=0)
+
+    def _header(self):
+        """Header matches the Aging Processor: NAVY bar 108px tall with logo on
+        the left and a centered title/subtitle block on the right."""
+        hdr=tk.Frame(self.root,bg=NAVY,height=108)
+        hdr.pack(fill="x"); hdr.pack_propagate(False)
+
+        # Load logo from GFH_Telecom_Logo.png next to this script, composite on
+        # NAVY, thumbnail to 260x82 (same recipe as Aging Processor).
+        logo_path=os.path.join(_script_dir(),LOGO_PNG_NAME)
+        if os.path.exists(logo_path):
+            try:
+                from PIL import Image as _PI,ImageTk as _PIT
+                img=_PI.open(logo_path).convert("RGBA")
+                bg2=_PI.new("RGBA",img.size,(9,13,38,255))
+                bg2.paste(img,mask=img.split()[3])
+                img=bg2.convert("RGB"); img.thumbnail((260,82),_PI.Resampling.LANCZOS)
+                self._logo_img=_PIT.PhotoImage(img)
+            except Exception:
+                self._logo_img=None
+
+        lf=tk.Frame(hdr,bg=NAVY); lf.place(relx=0,rely=0.5,anchor="w",x=24)
+        if self._logo_img:
+            tk.Label(lf,image=self._logo_img,bg=NAVY).pack()
+        else:
+            tk.Label(lf,text="GFH TELECOM",font=("Calibri",16,"bold"),
+                     fg=RED,bg=NAVY).pack()
+
+        tf=tk.Frame(hdr,bg=NAVY); tf.place(relx=0.58,rely=0.5,anchor="center")
+        tk.Label(tf,text="LEGACY EXCEL CONVERTER",
+                 font=("Calibri",18,"bold"),fg=WHITE,bg=NAVY).pack()
+        tk.Label(tf,text="Convert .xls / .xlsm / .xlt / .xlsb → .xlsx using real Excel",
+                 font=("Calibri",9),fg=WHITE,bg=NAVY).pack()
+
+    def _body(self):
+        body=tk.Frame(self.root,bg=LIGHT)
+        body.pack(fill="both",expand=True,padx=24,pady=18)
+
+        # folder row
+        fr=tk.Frame(body,bg=LIGHT); fr.pack(fill="x",pady=(0,14))
+        fr.columnconfigure(0,weight=1)
+        self.folder=tk.StringVar()
+        tk.Entry(fr,textvariable=self.folder,font=("Calibri",9),
+                 relief="flat",bg="#e8eff8",fg=NAVY,
+                 readonlybackground="#e8eff8",
+                 highlightbackground="#b0c4de",highlightthickness=1
+                 ).grid(row=0,column=0,sticky="ew",ipady=5,padx=(0,8))
+        ttk.Button(fr,text="Browse",style="Browse.TButton",
+                   command=self._browse).grid(row=0,column=1)
+
+        # options
+        opt=tk.Frame(body,bg=LIGHT); opt.pack(fill="x",pady=(0,14))
+        self.recurse=tk.BooleanVar(value=True)
+        self.overwrite=tk.BooleanVar(value=True)
+        self.delete=tk.BooleanVar(value=True)
+        for txt,var in [("Include subfolders",self.recurse),
+                        ("Overwrite existing .xlsx",self.overwrite),
+                        ("Delete original after converting",self.delete)]:
+            tk.Checkbutton(opt,text=txt,variable=var,font=("Calibri",10),
+                           fg=NAVY,bg=LIGHT,selectcolor=WHITE,
+                           activebackground=LIGHT,activeforeground=NAVY
+                           ).pack(side="left",padx=(0,16))
+
+        # action buttons
+        act=tk.Frame(body,bg=LIGHT); act.pack(fill="x",pady=(0,12))
+        self.run_btn=ttk.Button(act,text="▶  Convert",style="Run.TButton",
+                                command=self._start)
+        self.run_btn.pack(side="left")
+        self.cancel_btn=ttk.Button(act,text="⏹  Cancel",style="Cancel.TButton",
+                                   command=lambda:_CANCEL.set(),state="disabled")
+        self.cancel_btn.pack(side="left",padx=8)
+        self.pv=ttk.Progressbar(act,mode="determinate",
+                                style="Accent.Horizontal.TProgressbar")
+        self.pv.pack(side="left",fill="x",expand=True,padx=8)
+
+        # log
+        tk.Label(body,text="Activity Log",font=("Calibri",9,"bold"),
+                 fg=NAVY,bg=LIGHT).pack(anchor="w")
+        self.log_w=scrolledtext.ScrolledText(body,font=("Consolas",8),
+                    bg=LOG_BG,fg=LOG_FG,relief="flat",wrap="word")
+        self.log_w.pack(fill="both",expand=True)
+        for tag,clr in [("info","#90CDF4"),("success","#68D391"),
+                        ("error","#FC8181"),("warning","#F6E05E")]:
+            self.log_w.tag_config(tag,foreground=clr)
+
+    def _copyright_bar(self):
+        bar=tk.Frame(self.root,bg=NAVY,height=26)
+        bar.pack(fill="x",side="bottom"); bar.pack_propagate(False)
+        tk.Label(bar,text=COPYRIGHT_TEXT,bg=NAVY,fg="#9d9db8",
+                 font=("Calibri",8)).pack(pady=4)
+
+    def _browse(self):
+        d=filedialog.askdirectory(title="Select folder with legacy Excel files")
+        if d: self.folder.set(d)
+
+    def _log(self,m,tag=""): self._q.put(("log",m,tag))
+    def _poll(self):
+        try:
+            while True:
+                it=self._q.get_nowait()
+                if it[0]=="log":
+                    self.log_w.insert(tk.END,f"[{datetime.now():%H:%M:%S}]  {it[1]}\n",it[2] or ())
+                    self.log_w.see(tk.END)
+                elif it[0]=="prog":
+                    self.pv["maximum"]=it[1]; self.pv["value"]=it[2]
+                elif it[0]=="done":
+                    self._busy=False; self.cancel_btn.config(state="disabled")
+        except queue.Empty: pass
+        self.root.after(80,self._poll)
+
+    def _start(self):
+        if self._busy: return
+        folder=self.folder.get().strip()
+        if not folder or not os.path.isdir(folder):
+            messagebox.showerror("No folder","Please browse to a valid folder first."); return
+        _CANCEL.clear(); self._busy=True; self.cancel_btn.config(state="normal")
+        threading.Thread(target=self._run,args=(folder,),daemon=True).start()
+
+    def _run(self,folder):
+        log=self._log
+        log("="*54); log(f"Converter started {datetime.now():%Y-%m-%d %H:%M:%S}")
+        log(f"Folder: {folder}"); log("="*54)
+        try:
+            files=_find_files(folder, self.recurse.get())
+            log(f"  Legacy Excel files found: {len(files)}","info")
+            if not files:
+                log("  Nothing to convert.","warning"); self._q.put(("done",)); return
+            self._q.put(("prog",len(files),0))
+            conv=Converter(log)
+            # progress wrapper
+            t0=time.time()
+            def prog(i): self._q.put(("prog",len(files),i))
+            ok=skip=err=0
+            conv._start_excel()
+            try:
+                base=os.path.commonpath(files) if len(files)>1 else folder
+                for i,p in enumerate(files,1):
+                    if _CANCEL.is_set(): log("  ⏹ Cancelled.","warning"); break
+                    name=os.path.relpath(p,base)
+                    r=conv.convert_one(p, self.overwrite.get(), self.delete.get())
+                    if r=="ok": ok+=1; log(f"  [{i}/{len(files)}] ✅ {name}")
+                    elif r=="skip": skip+=1; log(f"  [{i}/{len(files)}] ↷ {name} (xlsx exists)")
+                    else: err+=1; log(f"  [{i}/{len(files)}] ❌ {name} — {r}","error")
+                    prog(i)
+            finally:
+                conv._stop_excel()
+            log("\n"+"="*54)
+            log(f"  Done in {time.time()-t0:,.0f}s — converted {ok}, skipped {skip}, failed {err}.",
+                "success" if err==0 else "warning")
+            log("="*54)
+        except Exception as e:
+            log(f"[FATAL] {e}","error"); log(traceback.format_exc(),"error")
+        self._q.put(("done",))
+
+
+def main():
+    root=tk.Tk(); App(root); root.mainloop()
+
+if __name__=="__main__":
+    main()
