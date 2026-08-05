@@ -151,7 +151,18 @@ ICON_ICO_B64 = "AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAAAAA
 
 
 def _script_dir():
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
     return os.path.dirname(os.path.abspath(__file__))
+
+
+def _resource_path(name):
+    """Resolve a bundled resource (logo PNG) from source or from a
+    PyInstaller one-file EXE (extra files extract to _MEIPASS)."""
+    if getattr(sys, "frozen", False):
+        base = getattr(sys, "_MEIPASS", _script_dir())
+        return os.path.join(base, name)
+    return os.path.join(_script_dir(), name)
 
 
 def _set_window_icon(root):
@@ -168,7 +179,7 @@ def _set_window_icon(root):
     except Exception:
         pass
     # Fallback: use the brand PNG as the window icon
-    png_path = os.path.join(_script_dir(), LOGO_PNG_NAME)
+    png_path = _resource_path(LOGO_PNG_NAME)
     try:
         if os.path.exists(png_path):
             from PIL import Image as _PI, ImageTk as _PIT
@@ -214,7 +225,7 @@ class App:
 
         # Load logo from GFH_Telecom_Logo.png next to this script, composite on
         # NAVY, thumbnail to 260x82 (same recipe as Aging Processor).
-        logo_path=os.path.join(_script_dir(),LOGO_PNG_NAME)
+        logo_path=_resource_path(LOGO_PNG_NAME)
         if os.path.exists(logo_path):
             try:
                 from PIL import Image as _PI,ImageTk as _PIT

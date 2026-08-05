@@ -28,6 +28,7 @@ jobs:
             pyinstaller --onefile --windowed --clean
             --name "gfh_xls_to_xlsx"
             --icon "GFH_Telecom_TBLogo.ico"
+            --add-data "GFH_Telecom_Logo.png;."
             --hidden-import win32gui --hidden-import win32con
             --hidden-import win32api --hidden-import win32process
             "gfh_xls_to_xlsx.pyw"
