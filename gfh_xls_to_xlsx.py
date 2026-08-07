@@ -245,8 +245,13 @@ class App:
                     troughcolor="#dde6f0",background=RED,borderwidth=0)
 
     def _header(self):
-        """Header matches the Aging Processor: NAVY bar 108px tall with logo on
-        the left and a centered title/subtitle block on the right."""
+        """Header: NAVY bar 108px tall with logo on the left, a truly centered
+        title/subtitle block, and a theme toggle on the right.
+
+        The title block is centered relative to the full header width (relx=0.5)
+        so the heading sits in the visual middle of the bar instead of being
+        pushed right by the logo.
+        """
         hdr=tk.Frame(self.root,bg=NAVY,height=108)
         hdr.pack(fill="x"); hdr.pack_propagate(False)
         hdr._tag = "header"
@@ -268,17 +273,27 @@ class App:
         lf=tk.Frame(hdr,bg=NAVY); lf.place(relx=0,rely=0.5,anchor="w",x=24)
         lf._tag = "header"
         if self._logo_img:
-            tk.Label(lf,image=self._logo_img,bg=NAVY).pack()
+            _ll = tk.Label(lf,image=self._logo_img,bg=NAVY)
+            _ll._tag = "logo"
+            _ll.pack()
         else:
-            tk.Label(lf,text="GFH TELECOM",font=("Calibri",16,"bold"),
-                     fg=RED,bg=NAVY).pack()
+            _ll = tk.Label(lf,text="GFH TELECOM",font=("Calibri",16,"bold"),
+                     fg=RED,bg=NAVY)
+            _ll._tag = "logo"
+            _ll.pack()
 
-        tf=tk.Frame(hdr,bg=NAVY); tf.place(relx=0.58,rely=0.5,anchor="center")
+        # Centered title block — relx=0.5 anchors it to the true horizontal
+        # middle of the header regardless of logo width or window size.
+        tf=tk.Frame(hdr,bg=NAVY); tf.place(relx=0.5,rely=0.5,anchor="center")
         tf._tag = "header"
-        tk.Label(tf,text="LEGACY EXCEL CONVERTER",
-                 font=("Calibri",18,"bold"),fg=WHITE,bg=NAVY).pack()
-        tk.Label(tf,text="Convert .xls / .xlsm / .xlt / .xlsb → .xlsx using real Excel",
-                 font=("Calibri",9),fg=WHITE,bg=NAVY).pack()
+        _t1 = tk.Label(tf,text="LEGACY EXCEL CONVERTER",
+                 font=("Calibri",18,"bold"),fg=WHITE,bg=NAVY)
+        _t1._tag = "logo"
+        _t1.pack()
+        _t2 = tk.Label(tf,text="Convert .xls / .xlsm / .xlt / .xlsb → .xlsx using real Excel",
+                 font=("Calibri",9),fg=WHITE,bg=NAVY)
+        _t2._tag = "logo"
+        _t2.pack()
 
         # One-click light/dark theme toggle in the header's right side
         theme_btn = create_theme_toggle_button(hdr, self.theme_manager, on_toggle=self._apply_theme)
