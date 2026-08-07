@@ -36,7 +36,7 @@ for _p,_i in [("pywin32","win32com")]:
 import os, time, threading, queue, traceback
 from datetime import datetime
 import tkinter as tk
-from theme_manager import ThemeManager, apply_theme_to_window, get_copyright_year
+from theme_manager import ThemeManager, apply_theme_to_window, get_copyright_year, create_theme_toggle_button
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import win32com.client
 
@@ -147,7 +147,7 @@ LOG_FG   = "#a8d8ff"
 
 ICON_ICO_NAME = "GFH_Telecom_TBLogo.ico"
 LOGO_PNG_NAME = "GFH_Telecom_Logo.png"
-COPYRIGHT_TEXT = "Developed by Abad Umair Channa  |  Copyright © 2026  |  All rights reserved."
+COPYRIGHT_TEXT = f"Developed by Abad Umair Channa  |  Copyright © {get_copyright_year()}  |  All rights reserved."
 ICON_ICO_B64 = "AAABAAEAICAAAAEAIACoEAAAFgAAACgAAAAgAAAAQAAAAAEAIAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAA0GRv/NBkb/zQZG/80GRv/NBkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zQZG/81GRv/NBgb/zUZG/81GRv/NBkb/zQZG/80GBv/NRkb/zQYG/80GRv/NBkb/zQZG/80GRv/NBkb/zQZG/81GRv/NRkb/zQZG/80GRv/NBgb/zUZG/80GRv/NBkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GBv/NRgb/zUYG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zYZHP81GRv/NRkb/zUYG/81GRv/NRkb/zUZG/81GRv/NRkc/zUZG/81GRz/Nhkc/zYZG/82GRz/Nhkc/zYZHP82GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUZG/81GRv/NRkb/zUYG/8/JCf/TDM2/zYaHP81GRv/NRgb/zUZG/81GRv/NRkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkb/zYZHP81GRv/NRkb/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkb/zYZG/82GRz/NRkb/zoeIP8/JCf/Nhkb/zUZG/81GRv/Nhkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zUYG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZG/82GRv/Nhkb/zYZG/82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZG/82GRr/NRkh/zMZKv8zGS3/Mxkn/zUZHv82GRr/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Mxoy/yseZv8lIIn/IyCS/yIfkf8iHoz/JB16/ywbUP80GSX/Nhka/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRv/Nhke/y8eWf8mI53/JyGL/y0dW/8wG0H/MBo7/y4aRf8pHGT/IR6O/yMdg/8wGjr/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHf8uIGj/JyWn/y8eWf80Giv/MRxH/ywfaP8rH3D/LR1e/zIaOf8zGS3/Jxxr/yEekv8wGj//Nhka/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRr/MR9S/ykorP8xHk3/Mxw4/yojjf8nJKD/KSGD/ysgd/8oIIj/JSKb/yoecP8vG0f/KB1t/yMfjv8zGi7/Nhkb/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zcZHP83GRz/Nxkb/zUaKP8sKKL/MCJu/zQbM/8qJqD/LCOE/zQaMv83GRv/Nxkb/zYZHf8uHVn/IyOp/yQhnP8sHWX/Jh+G/yodav82GRv/Nxkc/zYZHP82GRz/Nhkc/zYZHP82GRz/Nhkc/zcZHP82GRz/Nxkc/zcZHP83GRz/Nxkc/zcZHP83GRn/NCBT/y4rsP81GzL/LyWD/y0mkv82GiP/NRsu/y8hcP8sI4T/MB5Z/zAdSv8mI6H/JiOc/ywfbP8vHEz/JiGW/zQaKv83GRv/Nxkc/zcZHP83GRz/Nxkc/zcZHP82GRz/Nxkc/zYZHP83GRz/Nxkc/zYZHP83GRz/Nxkc/zcZGv8yJX3/MSeR/zUbNf8uKrL/NB5K/zYaJv8tJpb/LCaY/y4hdv8pJqT/LiFy/y4eX/8sH3D/NBou/zQaK/8mIpn/MRxC/zcZGv83GRz/Nxkc/zcZHP83GRz/Nxkc/zcZHP82GBv/Nhgb/zYYG/82GRz/Nhkc/zYZHP82GRz/Nxkb/zIplP8zJnr/NB5I/y8ss/81Giz/Mx9P/y0qrv81GzD/NxgX/zEeUf8pKLD/LSN//y0iev8tInn/LCF9/yclq/8wHU3/NxgZ/zcZHP83GRz/Nxkc/zcZHP83GRz/Nhkc/zYYG/82GBv/Nhgc/zYZHP82GBz/Nhgb/zYYG/82GR//Miyi/zIrnf80IVv/MS62/zUbLP8zH0//Lyyy/zUbMf82GBf/Mh9U/ysqtP8uI4D/LiJ7/y0iev8tIXn/Lh9r/zQaK/82GBv/Nhgb/zYYHP82GRz/Nhkc/zYYHP82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/NhgZ/zUfSf8yM8X/MjHC/zIrmv8xMLv/NCBO/zUZJv8xKp//MCul/zElgP8uK7H/MSNz/zYYGf82GBf/NhgY/zUaK/8zHUL/Nhgc/zYYG/82GBv/Nhgc/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBn/NSBL/zM0yf8yM8X/MyiB/zMqkf8yLaP/Nhok/zUbL/8yJXr/MSiQ/zIiY/81GSH/NRst/zMfUv80HDX/Mxw+/zEiaP82GSD/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GR//NSJb/zQpiv81I1z/NRw5/zIwuf8zLJr/NRw3/zYYGv80H0n/MimS/zMmfP8wK6j/Lyy4/y8qrv80HT7/Nhke/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBb/NSFS/zMzyP81Ilf/NR09/zIuqP8yMsT/Myh//zEtpf8xLrP/MDLP/zInh/80HDn/MCyx/zMiZv82GBj/Nhgb/zYYG/82GBv/Nxgb/zYYG/82GBv/Nxgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GR7/NSh//zQ0zf81JWr/NRsu/zQhVf80I2L/MyeE/zExxf8yLar/NB1D/zInh/8wL7v/NB1A/zYYGf82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYGv82GR//NSZv/zQ0yv80MLL/NSZy/zUgT/81IVP/MyiI/zIsnf8xMLz/MS6v/zQfSv82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBr/NR07/zUogv80MLX/NDLE/zQyxf8zMb3/Myyj/zQjZ/81Gin/NhgZ/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBn/NhgZ/zUZIv82Gy//NRw0/zUaK/82GB7/NhgY/zYYGv82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/83GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYGv82GBr/Nhga/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/NRgb/zUYG/81GBv/NRgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zUYG/81GBv/NRgb/zYYG/81GBv/Nhgb/zYYG/81GBv/NRgb/zUYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/81GBv/NRgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/82GBv/Nhgb/zYYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/82GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/NRgb/zYZG/81GBv/NRgb/zUYG/81GBv/NRgb/zUZG/81GBv/NRgb/zUYG/81GBv/NRgb/zUYG/81GBv/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
 
@@ -201,7 +201,9 @@ class App:
         _set_window_icon(root)
 
         self._logo_img=None
+        self.theme_manager = ThemeManager("GFH Legacy Excel Converter")
         self._styles(); self._header(); self._body(); self._copyright_bar(); self._poll()
+        apply_theme_to_window(self.root, self.theme_manager, self._apply_theme)
 
     def _apply_dynamic_geometry(self) -> None:
         """Size the window to 90% of the screen and center it.
@@ -247,6 +249,7 @@ class App:
         the left and a centered title/subtitle block on the right."""
         hdr=tk.Frame(self.root,bg=NAVY,height=108)
         hdr.pack(fill="x"); hdr.pack_propagate(False)
+        hdr._tag = "header"
 
         # Load logo from GFH_Telecom_Logo.png next to this script, composite on
         # NAVY, thumbnail to 260x82 (same recipe as Aging Processor).
@@ -263,6 +266,7 @@ class App:
                 self._logo_img=None
 
         lf=tk.Frame(hdr,bg=NAVY); lf.place(relx=0,rely=0.5,anchor="w",x=24)
+        lf._tag = "header"
         if self._logo_img:
             tk.Label(lf,image=self._logo_img,bg=NAVY).pack()
         else:
@@ -270,10 +274,19 @@ class App:
                      fg=RED,bg=NAVY).pack()
 
         tf=tk.Frame(hdr,bg=NAVY); tf.place(relx=0.58,rely=0.5,anchor="center")
+        tf._tag = "header"
         tk.Label(tf,text="LEGACY EXCEL CONVERTER",
                  font=("Calibri",18,"bold"),fg=WHITE,bg=NAVY).pack()
         tk.Label(tf,text="Convert .xls / .xlsm / .xlt / .xlsb → .xlsx using real Excel",
                  font=("Calibri",9),fg=WHITE,bg=NAVY).pack()
+
+        # One-click light/dark theme toggle in the header's right side
+        theme_btn = create_theme_toggle_button(hdr, self.theme_manager, on_toggle=self._apply_theme)
+        theme_btn.place(relx=0.98, rely=0.5, anchor="e")
+
+    def _apply_theme(self, colors=None):
+        """Re-apply the current theme across the window."""
+        apply_theme_to_window(self.root, self.theme_manager)
 
     def _body(self):
         body=tk.Frame(self.root,bg=LIGHT)
