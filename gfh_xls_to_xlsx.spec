@@ -1,10 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
-PyInstaller spec file for Gfh Xls To Xlsx
-Developed by Abad Umair Channa © 2026
+import datetime as _dt
+_year = _dt.date.today().year
 
+SPEC_DOC = f"""PyInstaller spec
+Developed by Abad Umair Channa © {_year}
 Build command: pyinstaller gfh_xls_to_xlsx.spec
 """
+
 
 block_cipher = None
 
