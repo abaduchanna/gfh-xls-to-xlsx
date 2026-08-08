@@ -169,8 +169,32 @@ def _resource_path(name):
     return os.path.join(_script_dir(), name)
 
 
+
+
+def _extract_embedded_icon(b64, filename):
+    """Decode an embedded base64 icon to a temp file; return path or None."""
+    try:
+        if not b64:
+            return None
+        import base64 as _b64, tempfile, os
+        target = os.path.join(tempfile.gettempdir(), filename)
+        with open(target, "wb") as fh:
+            fh.write(_b64.b64decode(b64))
+        return target if os.path.isfile(target) else None
+    except Exception:
+        return None
+
 def _set_window_icon(root):
     """Set taskbar + titlebar icon from the embedded GFH_Telecom_TBLogo.ico."""
+    # Use EMBEDDED_ICON_B64 first (self-contained, works in frozen .exe)
+    try:
+        _embedded_ico = _extract_embedded_icon(EMBEDDED_ICON_B64, "app_icon.ico")
+        if _embedded_ico:
+            root.iconbitmap(default=False, bitmap=_embedded_ico)
+            root.iconbitmap(_embedded_ico)
+            return
+    except Exception:
+        pass
     try:
         import base64, tempfile, atexit
         data = base64.b64decode(ICON_ICO_B64.strip())
