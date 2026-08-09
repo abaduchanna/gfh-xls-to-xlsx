@@ -223,7 +223,7 @@ def _set_window_icon(root):
 class App:
     def __init__(self, root):
         self.root=root; self._q=queue.Queue(); self._busy=False
-        root.title("GFH Legacy Excel Converter")
+        root.title("GFH Telecom - Legacy Excel Converter")
         # Dynamic screen resolution support: size to 90% of the screen and
         # center it (DPI-aware), then stay a normal resizable top-level so
         # Windows Snap (50% left/right, corners, Win+arrow) keeps working.
