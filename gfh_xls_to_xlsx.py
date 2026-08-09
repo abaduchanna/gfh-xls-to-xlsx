@@ -185,36 +185,40 @@ def _extract_embedded_icon(b64, filename):
         return None
 
 def _set_window_icon(root):
-    """Set taskbar + titlebar icon from the embedded GFH_Telecom_TBLogo.ico."""
-    # Use EMBEDDED_ICON_B64 first (self-contained, works in frozen .exe)
+    """Set taskbar + titlebar icon from embedded base64 ICO."""
+    import base64, tempfile, atexit, os
+    # Decode the embedded ICO to a temp file that persists until exit
     try:
-        _embedded_ico = _extract_embedded_icon(EMBEDDED_ICON_B64, "app_icon.ico")
-        if _embedded_ico:
-            root.iconbitmap(default=False, bitmap=_embedded_ico)
-            root.iconbitmap(_embedded_ico)
-            return
-    except Exception:
-        pass
-    try:
-        import base64, tempfile, atexit
-        data = base64.b64decode(ICON_ICO_B64.strip())
+        data = base64.b64decode(EMBEDDED_ICON_B64.strip())
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".ico")
-        tmp.write(data); tmp.close()
+        tmp.write(data)
+        tmp.close()
         atexit.register(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         root.iconbitmap(default=False, bitmap=tmp.name)
         root.iconbitmap(tmp.name)
         return
     except Exception:
         pass
-    # Fallback: use the brand PNG as the window icon
-    png_path = _resource_path(LOGO_PNG_NAME)
+    # Fallback: try ICON_ICO_B64
     try:
+        data = base64.b64decode(ICON_ICO_B64.strip())
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".ico")
+        tmp.write(data)
+        tmp.close()
+        atexit.register(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
+        root.iconbitmap(default=False, bitmap=tmp.name)
+        root.iconbitmap(tmp.name)
+        return
+    except Exception:
+        pass
+    # Last resort: brand PNG via iconphoto
+    try:
+        png_path = _resource_path(LOGO_PNG_NAME)
         if os.path.exists(png_path):
             from PIL import Image as _PI, ImageTk as _PIT
             root.iconphoto(True, _PIT.PhotoImage(_PI.open(png_path)))
     except Exception:
         pass
-
 
 class App:
     def __init__(self, root):
@@ -361,6 +365,8 @@ class App:
         # One-click light/dark theme toggle in the header's right side
         theme_btn = create_theme_toggle_button(hdr, self.theme_manager, on_toggle=self._apply_theme)
         theme_btn.place(relx=0.98, rely=0.5, anchor="e")
+
+        self._lock_header_colors(hdr, NAVY)
 
         self._lock_header_colors(hdr, NAVY)
 
