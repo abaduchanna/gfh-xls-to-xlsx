@@ -211,14 +211,7 @@ def _set_window_icon(root):
         return
     except Exception:
         pass
-    # Last resort: brand PNG via iconphoto
-    try:
-        png_path = _resource_path(LOGO_PNG_NAME)
-        if os.path.exists(png_path):
-            from PIL import Image as _PI, ImageTk as _PIT
-            root.iconphoto(True, _PIT.PhotoImage(_PI.open(png_path)))
-    except Exception:
-        pass
+    # No iconphoto fallback — iconbitmap is the only way to set the icon.
 
 class App:
     def __init__(self, root):
