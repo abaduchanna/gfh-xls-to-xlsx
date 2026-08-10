@@ -195,7 +195,6 @@ def _set_window_icon(root):
         if os.path.exists(ico_path):
             try:
                 root.iconbitmap(ico_path)
-                root.iconbitmap(ico_path)
                 return
             except Exception:
                 pass
@@ -209,7 +208,6 @@ def _set_window_icon(root):
     if os.path.exists(ico_path):
         try:
             root.iconbitmap(ico_path)
-            root.iconbitmap(ico_path)
             return
         except Exception:
             pass
@@ -222,7 +220,6 @@ def _set_window_icon(root):
         with open(ico_path, "wb") as f:
             f.write(data)
         root.iconbitmap(ico_path)
-        root.iconbitmap(ico_path)
         return
     except Exception:
         pass
@@ -232,12 +229,15 @@ class App:
     def __init__(self, root):
         self.root=root; self._q=queue.Queue(); self._busy=False
         root.title("GFH Telecom - Legacy Excel Converter")
+        # Set the window icon BEFORE _apply_dynamic_geometry() — that method
+        # calls update_idletasks() which realizes the window, and the icon
+        # must be set before realization or the taskbar/titlebar icon is lost.
+        _set_window_icon(root)
         # Dynamic screen resolution support: size to 90% of the screen and
         # center it (DPI-aware), then stay a normal resizable top-level so
         # Windows Snap (50% left/right, corners, Win+arrow) keeps working.
         self._apply_dynamic_geometry()
         root.configure(bg=LIGHT)
-        _set_window_icon(root)
 
         self._logo_img=None
         self.theme_manager = ThemeManager("GFH Legacy Excel Converter")
@@ -501,9 +501,10 @@ def _enable_dpi_awareness() -> None:
         return
     try:
         import ctypes
-        # Set AppUserModelID BEFORE any window is created
+        # Set AppUserModelID BEFORE any window is created — must be UNIQUE
+        # per app or Windows caches a generic/shared taskbar icon.
         try:
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GFHTelecom.App")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GFHTelecom.LegacyExcelConverter")
         except Exception:
             pass
         try:
