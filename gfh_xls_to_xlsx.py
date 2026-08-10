@@ -194,7 +194,7 @@ def _set_window_icon(root):
         ico_path = os.path.join(meipass, "gfh_icon_white.ico")
         if os.path.exists(ico_path):
             try:
-                root.iconbitmap(default=False, bitmap=ico_path)
+                root.iconbitmap(ico_path)
                 root.iconbitmap(ico_path)
                 return
             except Exception:
@@ -208,7 +208,7 @@ def _set_window_icon(root):
     ico_path = os.path.join(base_dir, "gfh_icon_white.ico")
     if os.path.exists(ico_path):
         try:
-            root.iconbitmap(default=False, bitmap=ico_path)
+            root.iconbitmap(ico_path)
             root.iconbitmap(ico_path)
             return
         except Exception:
@@ -221,7 +221,7 @@ def _set_window_icon(root):
         ico_path = os.path.join(tmp_dir, "gfh_app_icon.ico")
         with open(ico_path, "wb") as f:
             f.write(data)
-        root.iconbitmap(default=False, bitmap=ico_path)
+        root.iconbitmap(ico_path)
         root.iconbitmap(ico_path)
         return
     except Exception:
@@ -510,6 +510,11 @@ def _enable_dpi_awareness() -> None:
         return
     try:
         import ctypes
+        # Set AppUserModelID BEFORE any window is created
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GFHTelecom.App")
+        except Exception:
+            pass
         try:
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # system DPI aware
         except Exception:
