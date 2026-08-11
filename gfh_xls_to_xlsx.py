@@ -237,14 +237,6 @@ class App:
         # Windows Snap (50% left/right, corners, Win+arrow) keeps working.
         self._apply_dynamic_geometry()
         root.configure(bg=LIGHT)
-        # Brute-force taskbar icon: set AppUserModelID so Windows taskbar
-        # shows our icon instead of the generic Python/PyInstaller icon
-        try:
-            import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GFHTelecom.LegacyExcelConverter")
-        except Exception:
-            pass
-
         _set_window_icon(root)
 
         self._logo_img=None
@@ -509,11 +501,6 @@ def _enable_dpi_awareness() -> None:
         return
     try:
         import ctypes
-        # Set AppUserModelID BEFORE any window is created
-        try:
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("GFHTelecom.LegacyExcelConverter")
-        except Exception:
-            pass
         try:
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # system DPI aware
         except Exception:
