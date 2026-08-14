@@ -37,6 +37,8 @@ import os, time, threading, queue, traceback
 from datetime import datetime
 import tkinter as tk
 from theme_manager import ThemeManager, apply_theme_to_window, get_copyright_year, create_theme_toggle_button
+from header_manager import FixedHeaderManager
+from logo_handler import LogoHandler
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import win32com.client
 
@@ -311,63 +313,9 @@ class App:
         except Exception:
             pass
     def _header(self):
-        """Header: NAVY bar 108px tall with logo on the left, a truly centered
-        title/subtitle block, and a theme toggle on the right.
+        """Header using FixedHeaderManager."""
+        self.header_mgr = FixedHeaderManager(self.root, title="GFH Legacy Excel Converter")
 
-        The title block is centered relative to the full header width (relx=0.5)
-        so the heading sits in the visual middle of the bar instead of being
-        pushed right by the logo.
-        """
-        hdr=tk.Frame(self.root,bg=NAVY,height=108)
-        hdr.pack(fill="x"); hdr.pack_propagate(False)
-        hdr._tag = "header"
-
-        # Load logo from GFH_Telecom_Logo.png next to this script, composite on
-        # NAVY, thumbnail to 260x82 (same recipe as Aging Processor).
-        logo_path=_resource_path(LOGO_PNG_NAME)
-        if os.path.exists(logo_path):
-            try:
-                from PIL import Image as _PI,ImageTk as _PIT
-                img=_PI.open(logo_path).convert("RGBA")
-                bg2=_PI.new("RGBA",img.size,(9,13,38,255))
-                bg2.paste(img,mask=img.split()[3])
-                img=bg2.convert("RGB"); img.thumbnail((260,82),_PI.Resampling.LANCZOS)
-                self._logo_img=_PIT.PhotoImage(img)
-            except Exception:
-                self._logo_img=None
-
-        lf=tk.Frame(hdr,bg=NAVY); lf.place(relx=0,rely=0.5,anchor="w",x=24)
-        lf._tag = "header"
-        if self._logo_img:
-            _ll = tk.Label(lf,image=self._logo_img,bg=NAVY)
-            _ll._tag = "logo"
-            _ll.pack()
-        else:
-            _ll = tk.Label(lf,text="GFH TELECOM",font=("Calibri",16,"bold"),
-                     fg=RED,bg=NAVY)
-            _ll._tag = "logo"
-            _ll.pack()
-
-        # Centered title block — relx=0.5 anchors it to the true horizontal
-        # middle of the header regardless of logo width or window size.
-        tf=tk.Frame(hdr,bg=NAVY); tf.place(relx=0.5,rely=0.5,anchor="center")
-        tf._tag = "header"
-        _t1 = tk.Label(tf,text="LEGACY EXCEL CONVERTER",
-                 font=("Calibri",18,"bold"),fg=WHITE,bg=NAVY)
-        _t1._tag = "logo"
-        _t1.pack()
-        _t2 = tk.Label(tf,text="Convert .xls / .xlsm / .xlt / .xlsb → .xlsx using real Excel",
-                 font=("Calibri",9),fg=WHITE,bg=NAVY)
-        _t2._tag = "logo"
-        _t2.pack()
-
-        # One-click light/dark theme toggle in the header's right side
-        theme_btn = create_theme_toggle_button(hdr, self.theme_manager, on_toggle=self._apply_theme)
-        theme_btn.place(relx=0.98, rely=0.5, anchor="e")
-
-        self._lock_header_colors(hdr, NAVY)
-
-        self._lock_header_colors(hdr, NAVY)
 
     def _apply_theme(self, colors=None):
         """Re-apply the current theme across the window."""
