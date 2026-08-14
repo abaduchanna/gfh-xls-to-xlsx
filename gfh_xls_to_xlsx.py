@@ -242,7 +242,7 @@ class App:
         _set_window_icon(root)
 
         self._logo_img=None
-        self.theme_manager = ThemeManager("GFH Legacy Excel Converter")
+        self.theme_manager = ThemeManager("GFH Legacy Excel Converter", app_name="gfh-xls-to-xlsx")
         self._styles(); self._header(); self._body(); self._copyright_bar(); self._poll()
         apply_theme_to_window(self.root, self.theme_manager, self._apply_theme)
 
