@@ -321,6 +321,7 @@ class App:
     def _header(self):
         """Header using FixedHeaderManager."""
         self.header_mgr = FixedHeaderManager(self.root, title="GFH Legacy Excel Converter")
+        self.header_mgr.add_theme_toggle(self.theme_manager, callback=self._apply_theme)
         if hasattr(self.header_mgr, "header_frame"):
             self.header_mgr.header_frame._tag = "header"
             for child in self.header_mgr.header_frame.winfo_children():
@@ -333,7 +334,6 @@ class App:
                 self.header_mgr.set_logo(logo_path=_lp, text="GFH")
         except Exception:
             pass
-        self.header_mgr.add_theme_toggle(self.theme_manager, callback=self._apply_theme)
 
 
     def _apply_theme(self, colors=None):
