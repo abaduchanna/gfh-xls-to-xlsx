@@ -18,8 +18,6 @@ a = Analysis(
         ('assets', 'assets'),
         ('gfh_icon.ico', '.'),
         ('GFH_Telecom_Logo.png', '.'),
-        ('gfh_icon.png', '.'),
-        ('gfh_wordmark.png', '.'),
         ('theme_manager.py', '.'),
         ('logo_handler.py', '.'),
         ('header_manager.py', '.'),
