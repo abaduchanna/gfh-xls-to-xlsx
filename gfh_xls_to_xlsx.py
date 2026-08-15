@@ -34,7 +34,7 @@ for _p,_i in [("pywin32","win32com")]:
     _ensure(_p,_i)
 
 import os, time, threading, queue, traceback
-from datetime import datetime
+from datetime import datetime, date
 import tkinter as tk
 from theme_manager import ThemeManager, apply_theme_to_window, get_copyright_year
 from header_manager import FixedHeaderManager
