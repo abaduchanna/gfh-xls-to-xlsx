@@ -41,6 +41,11 @@ from header_manager import FixedHeaderManager
 from logo_handler import LogoHandler
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 import win32com.client
+import queue
+import threading
+import time
+import base64
+import tempfile
 
 # Excel file-format codes
 XLSX = 51        # xlOpenXMLWorkbook
