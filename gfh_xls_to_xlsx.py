@@ -315,6 +315,7 @@ class App:
     def _header(self):
         """Header using FixedHeaderManager."""
         self.header_mgr = FixedHeaderManager(self.root, title="GFH Legacy Excel Converter")
+        self.header_mgr.add_theme_toggle(self.theme_manager, callback=self._apply_theme)
 
 
     def _apply_theme(self, colors=None):
