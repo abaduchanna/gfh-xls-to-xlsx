@@ -249,7 +249,7 @@ class App:
         self._logo_img=None
         self.theme_manager = ThemeManager("GFH Legacy Excel Converter", app_name="gfh-xls-to-xlsx")
         self._styles(); self._header(); self._body(); self._copyright_bar(); self._poll()
-        apply_theme_to_window(self.root, self.theme_manager, self._apply_theme)
+        apply_theme_to_window(self.root, self.theme_manager)
 
     def _apply_dynamic_geometry(self) -> None:
         """Size the window to 90% of the screen and center it.
