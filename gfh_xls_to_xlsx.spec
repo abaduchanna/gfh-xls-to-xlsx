@@ -25,7 +25,6 @@ a = Analysis(
     hiddenimports=[
         'tkinter',
         '_tkinter',
-        'tkinter._fix',
         'win32com',
         'win32com.client',
         'pythoncom',
@@ -45,8 +44,6 @@ a = Analysis(
         'selenium',
         'pandas',
         'numpy',
-        'gspread',
-        'oauth2client',
         'requests',
         'pyperclip',
         'torch',
