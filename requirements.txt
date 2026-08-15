@@ -1,17 +1,5 @@
-# GFH Legacy Excel Converter — dependencies
+# Legacy Excel converter: COM automation only
 # Developed by Abad Umair Channa
 
-# Required: Excel COM automation (the core functionality)
 pywin32>=306
-
-# Required: image/logo handling
-pillow>=10.0.0
-
-# NOT needed (remove these — gfh_xls_to_xlsx doesn't use them):
-# openpyxl — not imported, Excel COM does the conversion
-# pandas — not imported
-# requests — not imported
-# pyautogui — not imported
-# pyperclip — not imported
-# gspread — not imported
-# oauth2client — not imported
+Pillow>=9.0.0
