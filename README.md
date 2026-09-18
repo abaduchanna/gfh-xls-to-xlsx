@@ -1,6 +1,10 @@
-# gfh-xls-to-xlsx
+# Legacy Excel Converter (GFH)
 
-Standalone GFH Telecom Tkinter tool: `gfh_xls_to_xlsx.pyw`.
-Builds a Windows EXE automatically via GitHub Actions on every push to `main`
-(uploaded directly to the repo's Releases page — no Actions storage used),
-and via CircleCI once the repo is connected at circleci.com.
+One-time batch tool: pick a folder and convert every legacy
+`.xls / .xlsm / .xlt / .xlsb` file to modern `.xlsx` using **real Excel
+(COM)** so formatting, formulas and data are preserved. Originals are kept by
+default (optional delete after success); already-converted files are skipped
+unless "overwrite" is ticked. Optional subfolder recursion.
+
+## Build
+Windows EXE built via GitHub Actions on push.

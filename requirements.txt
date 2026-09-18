@@ -1,5 +1,5 @@
 # Legacy Excel converter: COM automation only
-# Developed by Abad Umair Channa
+# Developed by www.3SVerse.com
 
 pywin32>=306
 Pillow>=9.0.0
