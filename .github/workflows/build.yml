@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         app:
-          - gfh_xls_to_xlsx
+          - GFH_Xls_To_Xlsx
 
     steps:
       - name: Checkout
